@@ -21,8 +21,8 @@ apt-get update
 
 # Install docker's latest version and it's dependecies
 
-# apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin (old)
-apt-get install docker.io -y
+apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+# apt-get install docker.io -y
 
 # Change permission modifier for all users instead of only root being allowed to run docker commands  
 usermod -aG docker ubuntu
