@@ -21,14 +21,14 @@ apt-get update
 
 # Install docker's latest version and it's dependecies
 
-# apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin (old)
 apt-get install docker.io -y
-systemctl start docker
-systemctl enable docker
 
 # Change permission modifier for all users instead of only root being allowed to run docker commands  
+usermod -aG docker ubuntu
 
-# usermod -aG docker ${USER} (to be used in the future)
+systemctl start docker
+systemctl enable docker
 
 # Download, compile and install efs-utils to prepare for the efs mounting
 
@@ -42,7 +42,7 @@ sudo apt-get -y install ./build/amazon-efs-utils*deb
 # Make a EFS directory and mount the cloud's EFS into
 
 mkdir -p /efs
-mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport fs-09e845a44b6bd8e13.efs.us-east-1.amazonaws.com:/ /efs
+sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport fs-09e845a44b6bd8e13.efs.us-east-1.amazonaws.com:/ /efs
 
 # Enter into the EFS directory and use docker compose to initialize the wordpress container based on the yaml manifest
 
