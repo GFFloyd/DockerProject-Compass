@@ -47,7 +47,7 @@ sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,ret
 # Enter into the EFS directory and use docker compose to initialize the wordpress container based on the yaml manifest
 
 cd /efs
-docker compose -f docker-manifest.yaml up -d
+docker compose up -d
 
 
 
