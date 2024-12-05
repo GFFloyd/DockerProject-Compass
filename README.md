@@ -6,6 +6,7 @@ _Projeto de Docker - Compass.UOL_
 ## Introdução
 
 A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteinerizado dentro, estas instâncias do Wordpress vão se conectar ao serviço RDS da Amazon (mySQL) e os arquivos estáticos do Wordpress serão guardados em um EFS montado dentro da EC2. A atividade também pede que usemos o Load Balancer como ponto de entrada e a única parte da arquitetura aberta em uma subrede pública, o restante deve estar em subredes privadas e com Auto-Scalling para aumentar ou diminuir quantas instâncias EC2 devem estar rodando, dependendo de alguns gatilhos específicos. Como mostra a imagem abaixo: 
+    
 ![Topologia da Nuvem AWS que a atividade pede](imgs/image.png)
 
 ---
@@ -86,14 +87,10 @@ De resto, não precisaremos mexer em mais nada, podemos apertar em Create databa
 Teremos que esperar algum tempo para que o banco de dados funcione.
 
 Para que o EC2 tenha acesso ao RDS teremos que mudar uma configuração no Security Group atual, teremos que editar as Inbound Rules no SG que estamos usando e especificar que queremos que as EC2 consigam acessar o MySQL pela porta 3306, como na imagem abaixo:
-![alt text](imgs/image2.png)
+![Imagem de exemplo do RDS](imgs/image2.png)
 Agora já temos tudo necessário para que a instância EC2 tenha conexão com o RDS, o que possibilita que o Wordpress funcione.
 
 ### 4. Criar o contêiner do Wordpress
-
-
-
-
 
 
 
