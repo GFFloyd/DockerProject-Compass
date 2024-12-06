@@ -14,10 +14,11 @@ A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteineriz
 ### Índice
 
 [Primeiros Passos e Testes](#primeiros-passos-e-testes)
-- [Criação da Instância EC2](#1-criação-da-instância-ec2)
-- [Instalar o Docker na EC2](#2-instalar-o-docker-na-ec2)
-- [Configurar o RDS](#3-configurar-o-rds)
-- [Criar o Contêiner do Wordpress](#4-criar-o-contêiner-do-wordpress)
+- [1. Criação da Instância EC2](#1-criação-da-instância-ec2)
+- [2. Instalar o Docker na EC2](#2-instalar-o-docker-na-ec2)
+- [3. Configurar o RDS](#3-configurar-o-rds)
+- [4. Criar o Contêiner do Wordpress](#4-criar-o-contêiner-do-wordpress)
+- [5. Criar a EFS e Conectá-la à EC2](#5-criar-uma-efs-e-conectá-la-à-ec2)
 
 ---
 
@@ -92,6 +93,59 @@ Agora já temos tudo necessário para que a instância EC2 tenha conexão com o 
 
 ### 4. Criar o contêiner do Wordpress
 
+Agora que temos acesso ao RDS, vamos entrar na instância EC2 que tem o docker e fazer o contêiner do Wordpress, iremos usar o **docker compose** para facilitar o processo de construção do contêiner.
+Dentro da EC2 vamos dar o seguinte comando: 
+```bash 
+sudo vim docker-compose.yaml
+``` 
+Nele, iremos escrever o manifesto que o docker compose usará para criar o Wordpress e fazer as conexões com o banco de dados, como a seguir:
+```yaml
+services:
+  wordpress:
+    image: wordpress
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      WORDPRESS_DB_HOST: <db-host>
+      WORDPRESS_DB_USER: <db-user>
+      WORDPRESS_DB_PASSWORD: <db-pwd>
+      WORDPRESS_DB_NAME: <db-name>
+    volumes:
+      - /efs/wordpress:/var/www/html
+```
+_Obs: Onde há aquelas variáveis de ambiente do banco de dados, você deverá colocar os valores atuais para o seu caso._ 
 
+Vamos salvar o arquivo e sair (esc + :wq no vim)
+Agora que temos o manifesto yaml pronto, iremos usar o docker para construir o contêiner, usaremos o seguinte comando no diretório que você colocou o arquivo docker-compose.yaml:
+```bash
+docker compose up -d
+```
+Se tudo ocorreu bem, o docker dirá que construir o contêiner mais uma rede própria do contêiner. Caso não tenha dado certo até aqui, recomendo ir na documentação do docker e ver se há algum problema com a instação ou com o docker compose: [Documentação do Docker](https://docs.docker.com/reference/).
+
+Agora podemos pegar o IP público da EC2 e entrar na porta 8080 e ver se iremos ser recebidos por esta imagem:
+![Wordpress Install](imgs/wordpressInstall.png)
+
+_Obs: Um problema comum desta parte é o Wordpress avisar que não pôde fazer uma conexão com o Banco de Dados, resolução mais comum desse problema é alguma credencial errada no yaml file ou no Security Group, se tiver com este problema, recomendo dar uma revisada nestas partes_
+
+Agora que temos um Wordpress funcional, iremos criar uma conexão da instância EC2 do Wordpress com o EFS (Elastic File System), para o Wordpress pegar seus arquivos estáticos independente do armazenamento das EC2.
+
+### 5. Criar uma EFS e conectá-la à EC2.
+
+Para criar um EFS é muito simples, apenas temos que dar um nome e dizer qual VPC queremos que ele use. Como estamos ainda na VPC Default, só iremos colocar um nome.
+
+Agora temos um EFS para montarmos em nossa EC2 do Wordpress, vamos entrar na EC2 e dar o seguinte comando para iniciarmos o processo de montagem do EFS lá:
+```bash
+sudo apt update -y
+sudo apt install nfs-common
+```
+O serviço nfs-common é necessário para montar file systems no Ubuntu, precisaremos dele, depois que ele estiver instalado, é hora de montarmos o EFS na máquina, teremos que ir na página da EFS e clicar em **Attach**.
+Vamos copiar um dos comandos que ele descreve para gente, parecido com este abaixo:
+```bash
+sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport <endereço de DNS para o EFS vai aqui>:/ /efs
+```
+Dentro da EC2 devemos colar este comando e se tudo der certo, com o ```df -h``` ele mostrará como um dos file systems montados no sistema. Agora o diretório /efs servirá como o volume onde o Wordpress irá salvar seus arquivos estáticos.
+
+_Obs: Se caso tenha erro nesta parte, provavelmente é algum erro da nfs-common ou de alguma configuração do EFS, como o Security Group._
 
 
