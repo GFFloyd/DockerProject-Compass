@@ -13,12 +13,17 @@ A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteineriz
 
 ### Índice
 
-[Primeiros Passos e Testes](#primeiros-passos-e-testes)
+[Primeiros Passos e Testes:](#primeiros-passos-e-testes)
 - [1. Criação da Instância EC2](#1-criação-da-instância-ec2)
 - [2. Instalar o Docker na EC2](#2-instalar-o-docker-na-ec2)
 - [3. Configurar o RDS](#3-configurar-o-rds)
 - [4. Criar o Contêiner do Wordpress](#4-criar-o-contêiner-do-wordpress)
 - [5. Criar a EFS e Conectá-la à EC2](#5-criar-uma-efs-e-conectá-la-à-ec2)
+
+[Próximos Passos](#próximos-passos)
+- [1. Criar uma VPC](#1-criar-uma-vpc)
+- [2. Criar as Sub-redes](#2-criar-as-sub-redes)
+- [3. Criar as Tabelas de Rotas e Internet Gateway](#3-criar-as-tabelas-de-rotas-e-internet-gateway)
 
 ---
 
@@ -148,4 +153,36 @@ Dentro da EC2 devemos colar este comando e se tudo der certo, com o ```df -h``` 
 
 _Obs: Se caso tenha erro nesta parte, provavelmente é algum erro da nfs-common ou de alguma configuração do EFS, como o Security Group._
 
+---
 
+## Próximos Passos
+
+### 1. Criar uma VPC
+
+Como a arquitetura proposta pede que criemos algumas sub-redes públicas e privadas, ficaria melhor criarmos uma VPC nossa, apesar que a AWS já cria uma default com tudo configurado.
+Para criarmos uma VPC é muito simples, vamos seguir alguns passos:
+1. Em **Name tag** daremos um nome único para a VPC.
+2. Na parte de **IPv4 CIDR** criaremos um bloco de IP para nossa rede interna, dá para criar com o que ele dá de exemplo: 10.0.0.0/16.
+_Obs: É bom lembrarmos deste IP, pois usaremos em algumas configurações_
+
+De resto, não precisaremos mudar nenhuma opção, só criar a VPC.
+
+### 2. Criar as Sub-redes.
+
+Vamos criar agora as quatro sub-redes dentro da VPC que acabamos de criar (duas públicas e duas privadas), vamos criar a sub-rede pública de exemplo e as outras três é só repetir os passos:
+
+1. Temos que especificar qual VPC iremos criar a sub-rede, importante selecionar a nova VPC.
+2. Em **Subnet name** colocaremos o nome desta sub-rede, por exemplo: subnet-public-1.
+3. Em **Availability zone** vamos especificar que queremos na us-east-1a.
+4. Em **IPv4 VPC CIDR block** especificaremos aquele bloco que vimos na parte anterior: 10.0.0.0/16.
+5. Em **IPv4 subnet CIDR block** iremos especificar o range de IPs que usaremos para esta sub-rede, vamos usar o 10.0.0.0/24 (Nas sub-redes posteriores iremos incrementar o terceiro octeto da faixa de IPs para não dar _overlap_).
+6. Faremos os mesmos passos nas outras 3 sub-redes.
+
+### 3. Criar as Tabelas de Rotas e Internet Gateway
+
+Esta parte é simples, apenas dar um nome para a tabela de rotas, exemplo: public-table-route.
+Depois temos que criar um Internet gateway, que também é só dar um nome, exemplo: wordpress-internet-gateway.
+
+Agora temos que vincular estes objetos novos às sub-redes.
+
+### 4. 
