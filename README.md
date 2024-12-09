@@ -5,7 +5,7 @@ _Projeto de Docker - Compass.UOL_
 
 ## Introdução
 
-A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteinerizado dentro, estas instâncias do Wordpress vão se conectar ao serviço RDS da Amazon (mySQL) e os arquivos estáticos do Wordpress serão guardados em um EFS montado dentro da EC2. A atividade também pede que usemos o Load Balancer como ponto de entrada e a única parte da arquitetura aberta em uma subrede pública, o restante deve estar em subredes privadas e com Auto-Scalling para aumentar ou diminuir quantas instâncias EC2 devem estar rodando, dependendo de alguns gatilhos específicos. Como mostra a imagem abaixo: 
+A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteinerizado dentro, estas instâncias do Wordpress vão se conectar ao serviço RDS da Amazon (mySQL) e os arquivos estáticos do Wordpress serão guardados em um EFS montado dentro da EC2. A atividade também pede que usemos o Load Balancer como ponto de entrada e a única parte da arquitetura aberta em uma subrede pública, o restante deve estar em subredes privadas e com Auto-Scaling para aumentar ou diminuir quantas instâncias EC2 devem estar rodando, dependendo de alguns gatilhos específicos. Como mostra a imagem abaixo: 
     
 ![Topologia da Nuvem AWS que a atividade pede](imgs/image.png)
 
@@ -24,8 +24,12 @@ A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteineriz
 - [1. Criar uma VPC](#1-criar-uma-vpc)
 - [2. Criar as Sub-redes](#2-criar-as-sub-redes)
 - [3. Criar as Tabelas de Rotas e Internet Gateway](#3-criar-as-tabelas-de-rotas-e-internet-gateway-vinculá-las-às-sub-redes)
+- [4. Criação dos Security Groups](#4-criação-dos-security-groups)
+- [5. Criar uma Nova RDS e EFS dentro da Nova VPC](#5-criar-uma-nova-rds-e-efs-dentro-da-nova-vpc)
 
-[Criação do Template](#criação-do-template)
+[Criação do Template e User Data](#criação-do-template-e-user-data)
+[Criação do Load Balancer](#criação-do-load-balancer)
+[Criação do Auto-Scaling]()
 
 ---
 
@@ -163,8 +167,8 @@ _Obs: Se caso tenha erro nesta parte, provavelmente é algum erro da nfs-common 
 
 Como a arquitetura proposta pede que criemos algumas sub-redes públicas e privadas, ficaria melhor criarmos uma VPC nossa, apesar que a AWS já cria uma default com tudo configurado.
 Para criarmos uma VPC é muito simples, vamos seguir alguns passos:
-1. Em **Name tag** daremos um nome único para a VPC.
-2. Na parte de **IPv4 CIDR** criaremos um bloco de IP para nossa rede interna, dá para criar com o que ele dá de exemplo: 10.0.0.0/16.
+* Em **Name tag** daremos um nome único para a VPC.
+* Na parte de **IPv4 CIDR** criaremos um bloco de IP para nossa rede interna, dá para criar com o que ele dá de exemplo: 10.0.0.0/16.
 _Obs: É bom lembrarmos deste IP, pois usaremos em algumas configurações_
 
 De resto, não precisaremos mudar nenhuma opção, só criar a VPC.
@@ -173,12 +177,12 @@ De resto, não precisaremos mudar nenhuma opção, só criar a VPC.
 
 Vamos criar agora as quatro sub-redes dentro da VPC que acabamos de criar (duas públicas e duas privadas), vamos criar a sub-rede pública de exemplo e as outras três é só repetir os passos:
 
-1. Temos que especificar qual VPC iremos criar a sub-rede, importante selecionar a nova VPC.
-2. Em **Subnet name** colocaremos o nome desta sub-rede, por exemplo: subnet-public-1.
-3. Em **Availability zone** vamos especificar que queremos na us-east-1a.
-4. Em **IPv4 VPC CIDR block** especificaremos aquele bloco que vimos na parte anterior: 10.0.0.0/16.
-5. Em **IPv4 subnet CIDR block** iremos especificar o range de IPs que usaremos para esta sub-rede, vamos usar o 10.0.0.0/24 (Nas sub-redes posteriores iremos incrementar o terceiro octeto da faixa de IPs para não dar _overlap_).
-6. Faremos os mesmos passos nas outras 3 sub-redes.
+* Temos que especificar qual VPC iremos criar a sub-rede, importante selecionar a nova VPC.
+* Em **Subnet name** colocaremos o nome desta sub-rede, por exemplo: subnet-public-1.
+* Em **Availability zone** vamos especificar que queremos na us-east-1a.
+* Em **IPv4 VPC CIDR block** especificaremos aquele bloco que vimos na parte anterior: 10.0.0.0/16.
+* Em **IPv4 subnet CIDR block** iremos especificar o range de IPs que usaremos para esta sub-rede, vamos usar o 10.0.0.0/24 (Nas sub-redes posteriores iremos incrementar o terceiro octeto da faixa de IPs para não dar _overlap_).
+* Faremos os mesmos passos nas outras 3 sub-redes.
 
 ### 3. Criar as Tabelas de Rotas e Internet Gateway, Vinculá-las às Sub-redes.
 
@@ -186,17 +190,59 @@ Esta parte é simples, apenas dar um nome para a tabela de rotas, exemplo: publi
 Depois temos que criar um Internet gateway, que também é só dar um nome, exemplo: wordpress-internet-gateway.
 Agora temos que vincular estes itens novos às sub-redes públicas e privadas.
 Para fazer isso seguiremos alguns passos:
-1. Em **Route Tables** iremos na public-route-table que criamos anteriormente e vamos em **Subnet Associations**.
-2. Vamos vincular explicitamente as sub-redes que queremos no botão **Edit subnet associations**, ali clicaremos nas sub-redes que queremos vincular à tabela de rotas.
-3. Faremos o mesmo processo para a outra tabela de rotas privada.
-4. Agora iremos associar a sub-rede pública ao internet gateway, vamos em **Routes** e clicaremos no botão **Edit routes**, ali vincularemos o gateway à essa sub-rede.
+* Em **Route Tables** iremos na public-route-table que criamos anteriormente e vamos em **Subnet Associations**.
+* Vamos vincular explicitamente as sub-redes que queremos no botão **Edit subnet associations**, ali clicaremos nas sub-redes que queremos vincular à tabela de rotas.
+* Faremos o mesmo processo para a outra tabela de rotas privada.
+* Agora iremos associar a sub-rede pública ao internet gateway, vamos em **Routes** e clicaremos no botão **Edit routes**, ali vincularemos o gateway à essa sub-rede.
 Por enquanto a sub-rede privada não vai ter um gateway, vai ficar isolado da internet, no futuro iremos criar um NAT gateway para que as instâncias privadas consigam baixar pacotes da internet.
 Se tudo deu certo, a topologia deve estar assim:
 ![topologia](imgs/vpcnetwork.png)
+
+### 4. Criação dos Security Groups
+
+Agora que criamos esta nova rede, precisamos vincular a elas alguns Security Groups novos, para configurarmos algumas **Inbound Rules** específicas para cada uma.
+Vamos em **Security Groups** na barra de pesquisa, lá vamos clicar no botão **Create security group**, estando lá vamos seguir alguns passos:
+* Dar um nome a ela, no caso estamos fazendo a Security Group pública, então colocarei public-sg como nome de exemplo.
+* Selecionaremos a VPC nova, ela deixa a default por padrão.
+* Iremos criar algumas **Inbound Rules** para esta SG:
+  Como este será o SG público, podemos ser um pouco permissivos nas regras, iremos adicionar regras para HTTP, HTTPS, SSH e que aceitem _**Anywhere-IPv4**_, somente nas regras de NFS e MySQL/Aurora que iremos especificar que queremos que só IPs da VPC possam acessar estes serviços, temos que especificar o **_CIDR Block_** que colocamos anteriormente (10.0.0.0/16);
+  _Obs: Na criação de SG privado iremos ser mais cautelosos nestas regras de entrada._
+*  Agora é só salvar este SG no botão **Create security group**
+* Faremos o mesmo para o SG privado, mas na parte de criação de **Inbound Rule** iremos especificar algumas coisas:
+  Vamos criar as mesmas regras para NFS, HTTP, HTTPS, SSH, MySQL/Aurora e especificar o Bloco CIDR da VPC para que somentes máquinas com aquele IP possam conectar aos serviços especificados. Vamos também criar uma regra TCP personalizada, que escuta na porta 8080, para ser o ponto de entrada do Wordpress, deixaremos também o bloco CIDR da VPC em _Source_.
+
+### 5. Criar uma Nova RDS e EFS Dentro da Nova VPC
+
+Bom lembrar que teremos que criar novos serviços de RDS e EFS dentro desta nova VPC, pois os serviços anteriores estão vinculados à VPC Default, seguir novamente os passos de criação de **[RDS](#3-configurar-o-rds)** e **[EFS](#5-criar-uma-efs-e-conectá-la-à-ec2)** (nesta parte de EFS não precisamos vincular ela a uma instância EC2 ainda) e mudar para a nova VPC e configurar para que elas sejam vinculadas aos **Security Groups**.
 
 ---
 
 ## Criação do Template e User Data
 
 Agora que temos a topologia da rede que foi proposta pela atividade, podemos começar a automatização da instância EC2, para que a EC2 baixe tudo que é necessário quando for instanciada e que não precisemos entrar na instância toda vez para configurá-la.
-Para isso, usaremos o serviço de **Launch Templates** dentro da sessão **EC2**. 
+Para isso, usaremos o serviço de **Launch Templates** dentro da sessão **EC2**.
+
+_Obs: É bom frisar que agora iremos criar as instâncias na sub-rede privada, já que esta é a proposta do projeto e iremos apenas criar o Load Balancer na sub-rede pública, para que as EC2 privadas tenham como baixar pacotes da internet, deveremos criar um NAT Gateway para eles, veremos isso mais a frente_
+
+Clicaremos em **Create launch template** e seguiremos o passo a passo abaixo:
+* Em **Launch template name and version description** daremos um nome para este template e uma descrição breve. Marcaremos também a opção de **Provide guidance to help me set up a template that I can use with EC2 Auto Scaling** para ajudar em quais partes serão necessárias para o serviço de Auto Scaling.
+* Em **Application and OS Images** iremos especificar que queremos Ubuntu.
+* Em **Instance Type** vamos colocar t2.micro mesmo.
+* Em **Key Pair** especificaremos o par de chaves que já criamos anteriormente.
+* Em **Network Settings** colocaremos o Security Group privado que criamos anteriormente. Ainda nesta parte clicaremos em **Advanced network settings**,clicaremos em **Add network interface** deixaremos do jeito que está, só mudaremos na parte que diz **Auto assign public IP** e selecionaremos **Disable**.
+* Em **Storage** deixaremos do jeito padrão.
+* Em **Resource Tags** colocaremos algum par de chave-valor que podemos usar para identificarmos as EC2, exemplo InstanceName com o valor Wordpress1.
+* E, finalmente, em Advanced Details iremos colocar um script BASH no final (em **User data - optional**), onde queremos especificar o que a EC2 deve fazer ao iniciar, que é chamado de user_data.sh, como já fizemos alguns comandos anteriormente, podemos compilar todos aqueles comandos em um só arquivo, para automatizar que a instância baixe o Docker, alguns pacotes do ubuntu, criar o contêiner via Docker Compose e já montar a EFS na máquina, para não colocar aqui e ficar muito extenso, este arquivo compilado pode ser checado neste repositório, com o nome **[user_data.sh](user_data.sh)**.
+* Agora podemos clicar em **Create launch template** e finalizar o processo.
+
+Não iremos usar ele ainda, pois precisamos ainda configurar o Load Balancer e o Auto-Scaling, que veremos a seguir.
+
+---
+
+## Criação do Load Balancer
+
+Antes de criarmos o Load Balancer, vamos criar um NAT Gateway, para que as futuras instâncias EC2 privadas tenham conectividade para baixar os pacotes quando forem instanciadas, vamos em **VPC** e em **NAT Gateways** clicaremos no botão **Create NAT gateway**.
+* Daremos um nome a esta NAT Gateway, por exemplo, project-nat-gateway.
+* Especificaremos qual sub-rede que este NAT gateway vai ficar.
+
+## Criação do Auto-Scaling
