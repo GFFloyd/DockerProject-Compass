@@ -13,7 +13,7 @@ A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteineriz
 
 ### Índice
 
-[Primeiros Passos e Testes:](#primeiros-passos-e-testes)
+[Primeiros Passos e Testes](#primeiros-passos-e-testes)
 - [1. Criação da Instância EC2](#1-criação-da-instância-ec2)
 - [2. Instalar o Docker na EC2](#2-instalar-o-docker-na-ec2)
 - [3. Configurar o RDS](#3-configurar-o-rds)
@@ -23,7 +23,9 @@ A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteineriz
 [Próximos Passos](#próximos-passos)
 - [1. Criar uma VPC](#1-criar-uma-vpc)
 - [2. Criar as Sub-redes](#2-criar-as-sub-redes)
-- [3. Criar as Tabelas de Rotas e Internet Gateway](#3-criar-as-tabelas-de-rotas-e-internet-gateway)
+- [3. Criar as Tabelas de Rotas e Internet Gateway](#3-criar-as-tabelas-de-rotas-e-internet-gateway-vinculá-las-às-sub-redes)
+
+[Criação do Template](#criação-do-template)
 
 ---
 
@@ -178,11 +180,23 @@ Vamos criar agora as quatro sub-redes dentro da VPC que acabamos de criar (duas 
 5. Em **IPv4 subnet CIDR block** iremos especificar o range de IPs que usaremos para esta sub-rede, vamos usar o 10.0.0.0/24 (Nas sub-redes posteriores iremos incrementar o terceiro octeto da faixa de IPs para não dar _overlap_).
 6. Faremos os mesmos passos nas outras 3 sub-redes.
 
-### 3. Criar as Tabelas de Rotas e Internet Gateway
+### 3. Criar as Tabelas de Rotas e Internet Gateway, Vinculá-las às Sub-redes.
 
-Esta parte é simples, apenas dar um nome para a tabela de rotas, exemplo: public-table-route.
+Esta parte é simples, apenas dar um nome para a tabela de rotas, exemplo: public-route-table.
 Depois temos que criar um Internet gateway, que também é só dar um nome, exemplo: wordpress-internet-gateway.
+Agora temos que vincular estes itens novos às sub-redes públicas e privadas.
+Para fazer isso seguiremos alguns passos:
+1. Em **Route Tables** iremos na public-route-table que criamos anteriormente e vamos em **Subnet Associations**.
+2. Vamos vincular explicitamente as sub-redes que queremos no botão **Edit subnet associations**, ali clicaremos nas sub-redes que queremos vincular à tabela de rotas.
+3. Faremos o mesmo processo para a outra tabela de rotas privada.
+4. Agora iremos associar a sub-rede pública ao internet gateway, vamos em **Routes** e clicaremos no botão **Edit routes**, ali vincularemos o gateway à essa sub-rede.
+Por enquanto a sub-rede privada não vai ter um gateway, vai ficar isolado da internet, no futuro iremos criar um NAT gateway para que as instâncias privadas consigam baixar pacotes da internet.
+Se tudo deu certo, a topologia deve estar assim:
+![topologia](imgs/vpcnetwork.png)
 
-Agora temos que vincular estes objetos novos às sub-redes.
+---
 
-### 4. 
+## Criação do Template e User Data
+
+Agora que temos a topologia da rede que foi proposta pela atividade, podemos começar a automatização da instância EC2, para que a EC2 baixe tudo que é necessário quando for instanciada e que não precisemos entrar na instância toda vez para configurá-la.
+Para isso, usaremos o serviço de **Launch Templates** dentro da sessão **EC2**. 
