@@ -28,8 +28,12 @@ A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteineriz
 - [5. Criar uma Nova RDS e EFS dentro da Nova VPC](#5-criar-uma-nova-rds-e-efs-dentro-da-nova-vpc)
 
 [Criação do Template e User Data](#criação-do-template-e-user-data) 
+
 [Criação do NAT Gateway e Load Balancer](#criação-do-nat-gateway-e-load-balancer) 
-[Criação do Auto-Scaling]()
+
+[Criação do Auto-Scaling](#criação-do-auto-scaling)
+
+[Conclusão Final](#conclusão)
 
 ---
 
@@ -116,7 +120,7 @@ services:
     image: wordpress
     restart: always
     ports:
-      - 8080:80
+      - 80:80
     environment:
       WORDPRESS_DB_HOST: <db-host>
       WORDPRESS_DB_USER: <db-user>
@@ -278,4 +282,8 @@ O Load Balancer irá fazer uns Health checks nestas instâncias e, se tudo ocorr
 ---
 
 ## Conclusão
+
+Fico imensamente agradecido da **Compass.UOL** nos dar esta oportunidade para praticarmos a fundo como criar uma infraestrutura na AWS, um serviço que é custoso e que teríamos problema para praticarmos se fôssemos pagar do nosso próprio bolso, por receio dos custos. 
+Aprendi muito nestas duas semanas de projeto, sendo que antes não tinha mexido muito com os serviços da AWS e hoje já me sinto confiante em alguns serviços, graças a este projeto.
+Muito obrigado.
 
