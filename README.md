@@ -27,8 +27,8 @@ A atividade pede que criemos algumas instâncias EC2 com o Wordpress conteineriz
 - [4. Criação dos Security Groups](#4-criação-dos-security-groups)
 - [5. Criar uma Nova RDS e EFS dentro da Nova VPC](#5-criar-uma-nova-rds-e-efs-dentro-da-nova-vpc)
 
-[Criação do Template e User Data](#criação-do-template-e-user-data)
-[Criação do Load Balancer](#criação-do-load-balancer)
+[Criação do Template e User Data](#criação-do-template-e-user-data) 
+[Criação do NAT Gateway e Load Balancer](#criação-do-nat-gateway-e-load-balancer) 
 [Criação do Auto-Scaling]()
 
 ---
@@ -239,10 +239,43 @@ Não iremos usar ele ainda, pois precisamos ainda configurar o Load Balancer e o
 
 ---
 
-## Criação do Load Balancer
+## Criação do NAT Gateway e Load Balancer
 
 Antes de criarmos o Load Balancer, vamos criar um NAT Gateway, para que as futuras instâncias EC2 privadas tenham conectividade para baixar os pacotes quando forem instanciadas, vamos em **VPC** e em **NAT Gateways** clicaremos no botão **Create NAT gateway**.
 * Daremos um nome a esta NAT Gateway, por exemplo, project-nat-gateway.
-* Especificaremos qual sub-rede que este NAT gateway vai ficar.
+* Especificaremos qual sub-rede que este NAT gateway vai ficar, temos que colocar ela numa das sub-redes públicas.
+Feito isto, clicaremos em **Create NAT Gateway**.
+
+Agora temos que associar esse NAT Gateway à sub-rede privada, iremos lá em **VPC**, clicaremos na sub-rede privada e iremos em **Routes**, nesta sessão cliquemos no botão **Edit routes**, ali vincularemos o NAT Gateway à sub-rede privada, feito isto, salvaremos.
+Agora quando criarmos instâncias EC2 privadas, elas podem se comunicar com a internet.
+
+Vamos criar o Load Balancer agora, em **EC2**, tem a sessão de **Load Balancers**, clicaremos no botão **Create load balancer** e seguiremos os passos:
+* Vamos em **Classic Load Balancer** e clicar em **Create**.
+* Daremos um nome para o LB, exemplo, project-load-balancer.
+* Em **Scheme** deixaremos o padrão.
+* Em **Network Mapping** vamos escolher a VPC nova, em **Mappings** especificaremos quais **_Availability Zones_** queremos que o Load Balancer roteie as conexões. Vamos colocar nas duas AZ públicas que criamos anteriormente (us-east-1a e us-east-1b).
+* Em **Security Groups** colocaremos o SG público criado antes.
+* Em **Listeners and Routing** deixaremos como está, já que nosso Wordpress está configurado para escutar na porta 80.
+* Em **Health Checks** deixaremos o ping na porta 80, mas vamos especificar que o _**Ping path**_ vai ser no diretório /wp-admin/install.php.
+* De resto não mudaremos nada e podemos clicar em **Create load balancer**.
+
+Agora o Load Balancer servirá de interface entre os usuários e as instâncias EC2, podendo balancear a carga para uma ou outra instância, na próxima sessão iremos tratar do Auto-Scaling, que poderá aumentar automaticamente as instâncias, dependendo do consumo de recursos das EC2 disponíveis.
+
+---
 
 ## Criação do Auto-Scaling
+
+Vamos agora tratar de uma das partes finais do projeto, que é o Auto-Scaling, para isso, vamos em **EC2** e em **Auto Scaling Groups** clicaremos em **Create auto scaling group**, vamos seguir alguns passos para a criação do mesmo:
+* Passo 1 - Em **Choose Launch Template** vamos escolher o template que criamos antes, para servir de base para as máquinas que serão criadas automaticamente pelo AS.
+* Passo 2 - Em **Choose Instance Launch Options**, na parte de **Network** iremos especificar a VPC nova e especificar as sub-redes e AZs que o Auto Scaling irá gerenciar (iremos escolher a us-east-1a e a us-east-1b, só que nas sub-redes privadas), deixaremos marcado **Balanced best effort**.
+* Passo 3 - Em **Integrate with other Services** iremos especificar que vamos vincular o Auto Scaling ao Load Balancer criado anteriormente clicando na opção **Attach to an existing load balancer**. Em **Existing load balancer target groups** iremos especificar as AZs e sub-redes vinculadas. Em **Health Checks** iremos clicar na caixa que diz **_Turn on Elastic Load Balancing health checks_**.
+* Passo 4 - Em **Configure group size and scaling** iremos definir qual a capacidade desejada do Auto Scaling, colocaremos 2, como pede a atividade. Em **Scaling** iremos colocar o **Min desired capacity** como 2 e **Max desired capacity** como 4. De resto deixaremos padrão.
+* Vamos passar pelas outras etapas e no final clicar em **Create auto scaling group** para finalizarmos.
+
+Se tudo deu certo, o Auto Scaling irá criar duas instâncias EC2 que já estão configuradas para baixar o Docker e configurar o Wordpress baseado no Docker Compose.
+O Load Balancer irá fazer uns Health checks nestas instâncias e, se tudo ocorreu bem, já poderemos acessar o DNS do Load Balancer e ver o Wordpress funcionando ao vivo na web, que era a proposta do projeto.
+
+---
+
+## Conclusão
+
